@@ -117,24 +117,64 @@ int lookup(char cmd[]) {
     return -1;
 }
 
+char *join_paths(char *path1,char *path2){
+
+    char *joined_path = (char*)malloc(4096);
+    strcpy(joined_path,path1);
+    strcat(joined_path,"/");
+    strcat(joined_path,path2);
+    joined_path[strlen(path1)+strlen(path2)+1]=0;
+    return joined_path;
+}
 
 /*checks if file_name exists within directory dir_name*/
 int file_exists_in_dir(char *dir_name,char *file_name){
+
+    int ret = 0;
     DIR *dir_ptr;
     struct dirent *dir;
-    dir_ptr = opendir(".");
+    dir_ptr = opendir(dir_name);
     if (dir_ptr)
     {
         while ((dir = readdir(dir_ptr)) != NULL)
         {
-            /*if current file is not a directory or symbolic link and has same name as desired file*/
-            if((dir->d_type == DT_REG) && strcmp(dir->d_name,file_name) == 0)
-                return 1;
-        }
+            if(dir->d_type == DT_DIR /*if this is a directory*/
+               && strcmp(dir->d_name,"..")!=0 /*and is not a parent directory reference*/
+               && strcmp(dir->d_name, ".")!=0 ){/*and is not a self reference*/
 
+                /*try to find the file in this sub directory*/
+                ret |= file_exists_in_dir(join_paths(dir_name,dir->d_name),file_name);
+            }
+
+            /*if this is a file and has the same name as file_name */
+            if((dir->d_type == DT_REG) && strcmp(dir->d_name, file_name) == 0) {
+                ret = 1;
+                break;
+            }
+        }
         closedir(dir_ptr);
     }
-    return 0;
+    return ret;
+}
+
+/*resolves the program from the path environment variable*/
+char *get_resolved_path(char* prog_name){
+    int found=0;
+    char *path_env_var = getenv("PATH");
+    struct tokens *tokens = tokenize(path_env_var,":");
+    char *parent_dir = (char*)malloc(4096);
+    for(unsigned int i = 0;i<tokens_get_length(tokens);i++){
+        /*if this path has the requested file*/
+       if(file_exists_in_dir(tokens_get_token(tokens,i),prog_name)){
+           /*copy this path into our absolute path*/
+           strcpy(parent_dir,tokens_get_token(tokens,i));
+           found = 1;
+       }
+    }
+    if(found)
+        return join_paths(parent_dir,prog_name);
+    else
+        return NULL;
 }
 
 
@@ -180,8 +220,6 @@ int main(unused int argc, unused char *argv[]) {
 
         /* Find which built-in function to run. */
         int fundex = lookup(tokens_get_token(tokens, 0));
-        fprintf(stdout,"%s",get_resolved_path("ls"));
-
         if (fundex >= 0) {
             cmd_table[fundex].fun(tokens);
         } else {
@@ -199,3 +237,6 @@ int main(unused int argc, unused char *argv[]) {
 
     return 0;
 }
+
+
+/*TODO factor join paths into a util file*/
