@@ -118,6 +118,26 @@ int lookup(char cmd[]) {
 }
 
 
+/*checks if file_name exists within directory dir_name*/
+int file_exists_in_dir(char *dir_name,char *file_name){
+    DIR *dir_ptr;
+    struct dirent *dir;
+    dir_ptr = opendir(".");
+    if (dir_ptr)
+    {
+        while ((dir = readdir(dir_ptr)) != NULL)
+        {
+            /*if current file is not a directory or symbolic link and has same name as desired file*/
+            if((dir->d_type == DT_REG) && strcmp(dir->d_name,file_name) == 0)
+                return 1;
+        }
+
+        closedir(dir_ptr);
+    }
+    return 0;
+}
+
+
 /* Intialization procedures for this shell */
 void init_shell() {
     /* Our shell is connected to standard input. */
@@ -160,10 +180,8 @@ int main(unused int argc, unused char *argv[]) {
 
         /* Find which built-in function to run. */
         int fundex = lookup(tokens_get_token(tokens, 0));
-        //fprintf(stdout,"%s",tokens_get_token(tokens, 0));
-        //fprintf(stdout,"%d",fundex);
+        fprintf(stdout,"%s",get_resolved_path("ls"));
 
-        //fprintf(stdout,"%d",file_exists_in_dir("/home/alyswidan/courses/OS/Shell-Berkeley-CS162/hw1","shell.cd"));
         if (fundex >= 0) {
             cmd_table[fundex].fun(tokens);
         } else {

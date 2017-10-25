@@ -14,3 +14,6 @@ char *tokens_get_token(struct tokens *tokens, size_t n);
 
 /* Free the memory */
 void tokens_destroy(struct tokens *tokens);
+
+/*utility function to print tokens joined into a string(used for debugging)*/
+char* tokens_join(struct tokens *tokens, char join_char);

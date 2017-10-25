@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "tokenizer.h"
-
+const static size_t n_max = 4096;//maximum allowable length of a token
 struct tokens {
   size_t tokens_length;
   char **tokens;
@@ -30,7 +30,7 @@ struct tokens *tokenize(const char *line,char* delimiters) {
   }
 
   static char token[4096];
-  size_t n = 0, n_max = 4096;
+  size_t n = 0;
   struct tokens *tokens;
   size_t line_length = strlen(line);
 
@@ -127,4 +127,23 @@ void tokens_destroy(struct tokens *tokens) {
     free(tokens->tokens);
   }
   free(tokens);
+}
+
+char* tokens_join(struct tokens *tokens, char join_char){
+    char *token;
+    size_t token_len;
+    char* joined_tokens = (char*)malloc(tokens_get_length(tokens) * n_max);//the joined tokens string
+    size_t joined_tokens_idx = 0;
+    for(unsigned int i = 0 ;i<tokens_get_length(tokens);i++){
+
+        token = tokens_get_token(tokens,i);
+        token_len = strlen(token);
+        strncpy(joined_tokens + joined_tokens_idx, token, token_len + 1);
+        joined_tokens_idx += token_len;
+        joined_tokens[joined_tokens_idx++] = join_char;
+    }
+    joined_tokens[joined_tokens_idx]='\0';
+    return joined_tokens;
+
+
 }
