@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #include "tokenizer.h"
 typedef struct err_map_node{/*a struct to represent an error number and its meaning*/
@@ -116,12 +117,6 @@ int lookup(char cmd[]) {
     return -1;
 }
 
-char *get_resolved_path(char* prog_name){
-    char *path_var = getenv("PATH");
-
-
-
-}
 
 /* Intialization procedures for this shell */
 void init_shell() {
@@ -151,7 +146,7 @@ void init_shell() {
 
 int main(unused int argc, unused char *argv[]) {
     init_shell();
-
+    char *SPACE_CHARS = " \f\r\t\v\n";
     static char line[4096];
     int line_num = 0;
 
@@ -161,11 +156,14 @@ int main(unused int argc, unused char *argv[]) {
 
     while (fgets(line, 4096, stdin)) {
         /* Split our line into words. */
-        struct tokens *tokens = tokenize(line);
+        struct tokens *tokens = tokenize(line,SPACE_CHARS);
 
         /* Find which built-in function to run. */
         int fundex = lookup(tokens_get_token(tokens, 0));
+        //fprintf(stdout,"%s",tokens_get_token(tokens, 0));
+        //fprintf(stdout,"%d",fundex);
 
+        //fprintf(stdout,"%d",file_exists_in_dir("/home/alyswidan/courses/OS/Shell-Berkeley-CS162/hw1","shell.cd"));
         if (fundex >= 0) {
             cmd_table[fundex].fun(tokens);
         } else {

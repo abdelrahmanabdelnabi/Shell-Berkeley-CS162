@@ -16,15 +16,15 @@ static void *vector_push(char ***pointer, size_t *size, void *elem) {
   *size += 1;
   return elem;
 }
-
 static void *copy_word(char *source, size_t n) {
   source[n] = '\0';
   char *word = (char *) malloc(n + 1);
   strncpy(word, source, n + 1);
   return word;
 }
-
-struct tokens *tokenize(const char *line) {
+/*delimiters is a string of delimiters to split the string at any one of them*/
+/*I added this delimiters argument to use this function to tokenize the path*/
+struct tokens *tokenize(const char *line,char* delimiters) {
   if (line == NULL) {
     return NULL;
   }
@@ -56,7 +56,7 @@ struct tokens *tokenize(const char *line) {
         if (i + 1 < line_length) {
           token[n++] = line[++i];//put this in current token
         }
-      } else if (isspace(c)) {
+      } else if (strchr(delimiters,c)!=NULL) {//check if current character is in the delimiters string
         if (n > 0) {//we just finished adding a token
           void *word = copy_word(token, n);//get a copy of the token
           vector_push(&tokens->tokens, &tokens->tokens_length, word);//add it to vector
