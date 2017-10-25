@@ -116,6 +116,12 @@ int lookup(char cmd[]) {
     return -1;
 }
 
+char *get_resolved_path(char* prog_name){
+    char *path_var = getenv("PATH");
+
+
+
+}
 
 /* Intialization procedures for this shell */
 void init_shell() {

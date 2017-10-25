@@ -47,23 +47,23 @@ struct tokens *tokenize(const char *line) {
 
   for (unsigned int i = 0; i < line_length; i++) {
     char c = line[i];
-    if (mode == MODE_NORMAL) {
-      if (c == '\'') {
+    if (mode == MODE_NORMAL) {//we are not within any kind of quotations
+      if (c == '\'') {//we entered a single quoted string
         mode = MODE_SQUOTE;
-      } else if (c == '"') {
+      } else if (c == '"') {//we entered a double quoted string
         mode = MODE_DQUOTE;
-      } else if (c == '\\') {
+      } else if (c == '\\') {//what follows is an escaped character
         if (i + 1 < line_length) {
-          token[n++] = line[++i];
+          token[n++] = line[++i];//put this in current token
         }
       } else if (isspace(c)) {
-        if (n > 0) {
-          void *word = copy_word(token, n);
-          vector_push(&tokens->tokens, &tokens->tokens_length, word);
-          n = 0;
+        if (n > 0) {//we just finished adding a token
+          void *word = copy_word(token, n);//get a copy of the token
+          vector_push(&tokens->tokens, &tokens->tokens_length, word);//add it to vector
+          n = 0;//reset index into token array
         }
       } else {
-        token[n++] = c;
+        token[n++] = c;//this is a new token start putting it into the array
       }
     } else if (mode == MODE_SQUOTE) {
       if (c == '\'') {
