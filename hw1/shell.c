@@ -166,7 +166,7 @@ char *get_resolved_path(char* prog_name){
     for(unsigned int i = 0;i<tokens_get_length(tokens);i++){
         /*if this path has the requested file*/
        if(file_exists_in_dir(tokens_get_token(tokens,i),prog_name)){
-           /*copy this path into our absolute path*/
+           /*this is the directory we are looking for*/
            strcpy(parent_dir,tokens_get_token(tokens,i));
            found = 1;
        }
@@ -220,6 +220,7 @@ int main(unused int argc, unused char *argv[]) {
 
         /* Find which built-in function to run. */
         int fundex = lookup(tokens_get_token(tokens, 0));
+
         if (fundex >= 0) {
             cmd_table[fundex].fun(tokens);
         } else {
