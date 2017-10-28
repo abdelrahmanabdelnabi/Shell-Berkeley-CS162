@@ -91,6 +91,24 @@ void init_shell() {
   }
 }
 
+
+char** get_args(struct tokens *tokens) {
+  int length = tokens_get_length(tokens);
+  if(length == 0)
+    return NULL;
+    
+  char **args = malloc((length + 1 ) * sizeof(char*)); // +1 to terminate the array with null
+  int i;
+  for(i = 0; i < length; i++) {
+	  // TODO: only pass arguements and keep pipes and "&" for the shell to interpret
+		args[i] = tokens_get_token(tokens, i);
+	}
+
+  // terminate the args array
+  args[i] = 0;
+  return args;
+}
+
 int main(unused int argc, unused char *argv[]) {
   init_shell();
 
@@ -112,7 +130,21 @@ int main(unused int argc, unused char *argv[]) {
       cmd_table[fundex].fun(tokens);
     } else {
       /* REPLACE this to run commands as programs. */
-      fprintf(stdout, "This shell doesn't know how to run programs.\n");
+      char *cmd = tokens_get_token(tokens, 0);
+      char** args = get_args(tokens); 
+      
+      pid_t child = fork();
+      
+      if(child == 0) {  // child process
+		    if(execv(cmd, args) == -1) {
+          printf("error occurred executing command\n");
+          printf("error message: %s\n", strerror(errno));
+          exit(0);
+        }
+			} else  { // parent
+        wait(0);
+      }
+      free(args);
     }
 
     if (shell_is_interactive)
