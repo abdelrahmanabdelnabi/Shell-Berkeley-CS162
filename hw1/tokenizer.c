@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "tokenizer.h"
-
+const static size_t n_max = 4096;//maximum allowable length of a token
 struct tokens {
   size_t tokens_length;
   char **tokens;
@@ -16,21 +16,21 @@ static void *vector_push(char ***pointer, size_t *size, void *elem) {
   *size += 1;
   return elem;
 }
-
 static void *copy_word(char *source, size_t n) {
   source[n] = '\0';
   char *word = (char *) malloc(n + 1);
   strncpy(word, source, n + 1);
   return word;
 }
-
-struct tokens *tokenize(const char *line) {
+/*delimiters is a string of delimiters to split the string at any one of them*/
+/*I added this delimiters argument to use this function to tokenize the path*/
+struct tokens *tokenize(const char *line,char* delimiters) {
   if (line == NULL) {
     return NULL;
   }
 
   static char token[4096];
-  size_t n = 0, n_max = 4096;
+  size_t n = 0;
   struct tokens *tokens;
   size_t line_length = strlen(line);
 
@@ -47,23 +47,23 @@ struct tokens *tokenize(const char *line) {
 
   for (unsigned int i = 0; i < line_length; i++) {
     char c = line[i];
-    if (mode == MODE_NORMAL) {
-      if (c == '\'') {
+    if (mode == MODE_NORMAL) {//we are not within any kind of quotations
+      if (c == '\'') {//we entered a single quoted string
         mode = MODE_SQUOTE;
-      } else if (c == '"') {
+      } else if (c == '"') {//we entered a double quoted string
         mode = MODE_DQUOTE;
-      } else if (c == '\\') {
+      } else if (c == '\\') {//what follows is an escaped character
         if (i + 1 < line_length) {
-          token[n++] = line[++i];
+          token[n++] = line[++i];//put this in current token
         }
-      } else if (isspace(c)) {
-        if (n > 0) {
-          void *word = copy_word(token, n);
-          vector_push(&tokens->tokens, &tokens->tokens_length, word);
-          n = 0;
+      } else if (strchr(delimiters,c)!=NULL) {//check if current character is in the delimiters string
+        if (n > 0) {//we just finished adding a token
+          void *word = copy_word(token, n);//get a copy of the token
+          vector_push(&tokens->tokens, &tokens->tokens_length, word);//add it to vector
+          n = 0;//reset index into token array
         }
       } else {
-        token[n++] = c;
+        token[n++] = c;//this is a new token start putting it into the array
       }
     } else if (mode == MODE_SQUOTE) {
       if (c == '\'') {
@@ -127,4 +127,23 @@ void tokens_destroy(struct tokens *tokens) {
     free(tokens->tokens);
   }
   free(tokens);
+}
+
+char* tokens_join(struct tokens *tokens, char join_char){
+    char *token;
+    size_t token_len;
+    char* joined_tokens = (char*)malloc(tokens_get_length(tokens) * n_max);//the joined tokens string
+    size_t joined_tokens_idx = 0;
+    for(unsigned int i = 0 ;i<tokens_get_length(tokens);i++){
+
+        token = tokens_get_token(tokens,i);
+        token_len = strlen(token);
+        strncpy(joined_tokens + joined_tokens_idx, token, token_len + 1);
+        joined_tokens_idx += token_len;
+        joined_tokens[joined_tokens_idx++] = join_char;
+    }
+    joined_tokens[joined_tokens_idx]='\0';
+    return joined_tokens;
+
+
 }

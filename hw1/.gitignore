@@ -1,4 +1,10 @@
 hw1.pdf
+#object files
 *.o
+#executbles
 shell
+#clion created files
+.idea
+cmake-build-debug
+CMakeLists.txt
 
