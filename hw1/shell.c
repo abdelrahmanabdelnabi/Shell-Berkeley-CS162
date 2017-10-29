@@ -43,7 +43,7 @@ struct termios shell_tmodes;
 pid_t shell_pgid;
 
 /* The number of processes running in the background */
-int nr_process;
+int nr_background;
 
 int cmd_exit(struct tokens *tokens);
 int cmd_help(struct tokens *tokens);
@@ -188,7 +188,7 @@ void init_shell() {
     /* Check if we are running interactively */
     shell_is_interactive = isatty(shell_terminal);
 
-    nr_process = 0;
+    nr_background = 0;
 
     if (shell_is_interactive) {
         /* If the shell is not currently in the foreground, we must pause the shell until it becomes a
@@ -212,18 +212,38 @@ void init_shell() {
 char** get_args(struct tokens *tokens) {
     int length = tokens_get_length(tokens);
     if(length == 0)
-      return NULL;
+        return NULL;
     
     char **args = malloc((length + 1 ) * sizeof(char*)); // +1 to terminate the array with null
-    int i;
-    for(i = 0; i < length; i++) {
-      // TODO: only pass arguements and keep pipes and "&" for the shell to interpret
-      args[i] = tokens_get_token(tokens, i);
+    int index = 0;
+    for(int i = 0; i < length; i++) {
+        // TODO: only pass arguements and keep pipes and "&" for the shell to interpret
+        char* token = tokens_get_token(tokens, i);
+        if(strncmp(token, "&", strlen("&")) != 0) {
+            args[index] = token;
+            index++;
+        }
     }
 
     // terminate the args array
-    args[i] = 0;
+    args[index] = 0;
     return args;
+}
+
+int isBackground(struct tokens *tokens) {
+    int length = tokens_get_length(tokens);
+    if(length == 0)
+        return 0;
+    char* last = tokens_get_token(tokens, length - 1);
+    if(strncmp(last, "&", strlen("&")) == 0)
+        return 1;
+    return 0;
+}
+
+void child_exit_handler(int sig) {
+    wait(NULL);
+
+    nr_background--;
 }
 
 int main(unused int argc, unused char *argv[]) {
@@ -231,6 +251,7 @@ int main(unused int argc, unused char *argv[]) {
     char *SPACE_CHARS = " \f\r\t\v\n";
     static char line[4096];
     int line_num = 0;
+    signal(SIGCHLD,child_exit_handler);
 
     /* Please only print shell prompts when standard input is not a tty */
     if (shell_is_interactive)
@@ -243,39 +264,38 @@ int main(unused int argc, unused char *argv[]) {
         /* Find which built-in function to run. */
         int fundex = lookup(tokens_get_token(tokens, 0));
 
-        if (fundex >= 0) {
-            cmd_table[fundex].fun(tokens);
-        } else {
-            /* REPLACE this to run commands as programs. */
-            fprintf(stdout, "This shell doesn't know how to run programs.\n");
-        }
-
         if (shell_is_interactive)
             /* Please only print shell prompts when standard input is not a tty */
             fprintf(stdout, "%d: ", ++line_num);
 
-    if (fundex >= 0) {
-        cmd_table[fundex].fun(tokens);
-    } else {
-        /* REPLACE this to run commands as programs. */
-        char *cmd = tokens_get_token(tokens, 0);
-        char **args = get_args(tokens); 
+        if (fundex >= 0) {
+            cmd_table[fundex].fun(tokens);
+        } else {
+            /* REPLACE this to run commands as programs. */
+            char *cmd = tokens_get_token(tokens, 0);
+            char **args = get_args(tokens); 
 
-        pid_t child = fork();
-      
-        if(child == 0) {  // child process
-            if(execv(cmd, args) == -1) {
-                printf("error occurred executing command\n");
-                printf("error message: %s\n", strerror(errno));
-                exit(0);
+            int background = isBackground(tokens);
+            if(background)
+                nr_background++;
+            
+            pid_t child = fork();
+
+            if(child == 0) {  // child process
+                if(execv(cmd, args) == -1) {
+                    printf("error occurred executing command\n");
+                    printf("error message: %s\n", strerror(errno));
+                    exit(0);
+                }
+            } else { // parent
+                if(!background)
+                    waitpid(child, NULL, 0);
             }
-        } else { // parent
-            wait(0);
-        }
-        free(args);
+            free(args);
 
-        /* Clean up memory */
-        tokens_destroy(tokens);
+            /* Clean up memory */
+            tokens_destroy(tokens);
+        }
     }
 
     return 0;
