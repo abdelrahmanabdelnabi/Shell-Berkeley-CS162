@@ -12,21 +12,7 @@
 #include <dirent.h>
 
 #include "tokenizer.h"
-typedef struct err_map_node{/*a struct to represent an error number and its meaning*/
-    int number;
-    char* desc;
-}err_map_node_t;
-/*a list of errors returned by cd and their corresponding meaning*/
-err_map_node_t errs_map[]= {
-        {EACCES,"Search permission is denied for one of the components  of  path."},
-        {EFAULT,"path points outside your accessible address space."},
-        {EIO    ,"An I/O error occurred."},
-        {ELOOP ,"Too many symbolic links were encountered in resolving path."},
-        {ENAMETOOLONG,"path is too long."},
-        {ENOENT, "The file does not exist."},
-        {ENOMEM, "Insufficient kernel memory was available."},
-        {ENOTDIR,"A component of path is not a directory."}
-};
+
 /* Convenience macro to silence compiler warnings about unused function parameters. */
 #define unused __attribute__((unused))
 
@@ -69,15 +55,6 @@ fun_desc_t cmd_table[] = {
 
 
 
-/*looks up the description of the error number passed as argument*/
-char *lookup_errno(int number)
-{
-    for(unsigned int i = 0;i< sizeof(errs_map)/ sizeof(err_map_node_t);i++)
-        if(errs_map[i].number == number)
-            return errs_map[i].desc;
-
-    return NULL;
-}
 /* Prints a helpful description for the given command */
 int cmd_help(unused struct tokens *tokens) {
     for (unsigned int i = 0; i < sizeof(cmd_table) / sizeof(fun_desc_t); i++)
@@ -103,13 +80,11 @@ int cmd_cd(struct tokens *tokens){
     int result = chdir(tokens_get_token(tokens, 1));
     if(result == 0)
         return 1;
-    else {
-        if(lookup_errno(errno))
-            fprintf(stdout, "%s\n",lookup_errno(errno));
-        else
-            fprintf(stdout,"an unknown error occurred");
+    else{
+        fprintf(stdout, "%s\n",strerror(errno));
         return 0;
     }
+
 }
 /* Looks up the built-in command, if it exists. */
 int lookup(char cmd[]) {
