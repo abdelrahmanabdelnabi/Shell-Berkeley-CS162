@@ -251,7 +251,7 @@ int main(unused int argc, unused char *argv[]) {
     char *SPACE_CHARS = " \f\r\t\v\n";
     static char line[4096];
     int line_num = 0;
-    signal(SIGCHLD,child_exit_handler);
+    // signal(SIGCHLD,child_exit_handler);
 
     /* Please only print shell prompts when standard input is not a tty */
     if (shell_is_interactive)
@@ -273,7 +273,15 @@ int main(unused int argc, unused char *argv[]) {
         } else {
             /* REPLACE this to run commands as programs. */
             char *cmd = tokens_get_token(tokens, 0);
-            char **args = get_args(tokens); 
+            char **args = get_args(tokens);
+            char *resolved_path = get_resolved_path(cmd); 
+
+            if( resolved_path == NULL) {
+                if (shell_is_interactive)
+                    /* Please only print shell prompts when standard input is not a tty */
+                    fprintf(stdout, "%d: ", ++line_num);
+                continue;
+            }
 
             int background = isBackground(tokens);
             if(background)
@@ -282,7 +290,7 @@ int main(unused int argc, unused char *argv[]) {
             pid_t child = fork();
 
             if(child == 0) {  // child process
-                if(execv(cmd, args) == -1) {
+                if(execv(resolved_path, args) == -1) {
                     printf("error occurred executing command\n");
                     printf("error message: %s\n", strerror(errno));
                     exit(0);
