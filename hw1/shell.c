@@ -255,7 +255,7 @@ int main(unused int argc, unused char *argv[]) {
                 if (shell_is_interactive)
                     /* Please only print shell prompts when standard input is not a tty */
                     fprintf(stdout, "%d: ", ++line_num);
-                continue;
+                printf("%s: command not found\n",cmd);
             }
 
             int background = isBackground(tokens);
