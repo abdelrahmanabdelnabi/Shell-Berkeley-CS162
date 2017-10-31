@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "tokenizer.h"
 const static size_t n_max = 4096;//maximum allowable length of a token
 struct tokens {
@@ -57,7 +58,7 @@ struct tokens *tokenize(const char *line,char* delimiters) {
           token[n++] = line[++i];//put this in current token
         }
       } else if (strchr(delimiters,c)!=NULL) {//check if current character is in the delimiters string
-        if (n > 0) {//we just finished adding a token
+          if (n > 0) {//we just finished adding a token
           void *word = copy_word(token, n);//get a copy of the token
           vector_push(&tokens->tokens, &tokens->tokens_length, word);//add it to vector
           n = 0;//reset index into token array

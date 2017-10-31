@@ -68,16 +68,21 @@ int cmd_exit(unused struct tokens *tokens) {
 }
 
 int cmd_pwd(unused struct tokens *tokens){
+
     char cwd[1024];
     getcwd(cwd, sizeof(cwd));
-    fprintf(stdout, "%s\n",cwd);
+    printf("%s\n",cwd);
     return 1;
 }
 
 /*sets the current directory*/
 int cmd_cd(struct tokens *tokens){
 
-    int result = chdir(tokens_get_token(tokens, 1));
+    int result;
+    if(tokens_get_length(tokens)<2)
+        result = chdir(getenv("HOME"));
+    else
+        result = chdir(tokens_get_token(tokens, 1));
     if(result == 0)
         return 1;
     else{
@@ -88,6 +93,7 @@ int cmd_cd(struct tokens *tokens){
 }
 /* Looks up the built-in command, if it exists. */
 int lookup(char cmd[]) {
+
     for (unsigned int i = 0; i < sizeof(cmd_table) / sizeof(fun_desc_t); i++)
         if (cmd && (strcmp(cmd_table[i].cmd, cmd) == 0))
             return i;
@@ -115,13 +121,14 @@ int file_exists_in_dir(char *dir_name,char *file_name){
     {
         while ((dir = readdir(dir_ptr)) != NULL)
         {
-            if(dir->d_type == DT_DIR /*if this is a directory*/
-               && strcmp(dir->d_name,"..")!=0 /*and is not a parent directory reference*/
-               && strcmp(dir->d_name, ".")!=0 ){/*and is not a self reference*/
 
-                /*try to find the file in this sub directory*/
+/*            if(dir->d_type == DT_DIR *//*if this is a directory*//*
+               && strcmp(dir->d_name,"..")!=0 *//*and is not a parent directory reference*//*
+               && strcmp(dir->d_name, ".")!=0 ){*//*and is not a self reference*//*
+
+                *//*try to find the file in this sub directory*//*
                 ret |= file_exists_in_dir(join_paths(dir_name,dir->d_name),file_name);
-            }
+            }*/
 
             /*if this is a file and has the same name as file_name */
             if((dir->d_type == DT_REG) && strcmp(dir->d_name, file_name) == 0) {
@@ -136,6 +143,8 @@ int file_exists_in_dir(char *dir_name,char *file_name){
 
 /*resolves the program from the path environment variable*/
 char *get_resolved_path(char* prog_name){
+    if(strchr(prog_name,'/'))//if this is a file in current directory
+        return prog_name;
     int found=0;
     char *path_env_var = getenv("PATH");
     struct tokens *tokens = tokenize(path_env_var,":");
@@ -185,7 +194,7 @@ void init_shell() {
 
 
 char** get_args(struct tokens *tokens) {
-    int length = tokens_get_length(tokens);
+    size_t length = tokens_get_length(tokens);
     if(length == 0)
         return NULL;
     
@@ -206,13 +215,20 @@ char** get_args(struct tokens *tokens) {
 }
 
 int isBackground(struct tokens *tokens) {
-    int length = tokens_get_length(tokens);
+    size_t length = tokens_get_length(tokens);
     if(length == 0)
         return 0;
-    char* last = tokens_get_token(tokens, length - 1);
-    if(strncmp(last, "&", strlen("&")) == 0)
-        return 1;
+    for (size_t i = 0; i < length; ++i) {//pdf says & could be anywhere in command
+        if(strncmp(tokens_get_token(tokens,i), "&", strlen("&")) == 0)
+            return 1;
+    }
+
     return 0;
+}
+void print_prompt(){
+    /* Please only print shell prompts when standard input is not a tty */
+    if (shell_is_interactive)
+        fprintf(stdout, "Shell> ");
 }
 
 void child_exit_handler(int sig) {
@@ -228,34 +244,30 @@ int main(unused int argc, unused char *argv[]) {
     int line_num = 0;
     // signal(SIGCHLD,child_exit_handler);
 
-    /* Please only print shell prompts when standard input is not a tty */
-    if (shell_is_interactive)
-        fprintf(stdout, "%d: ", line_num);
+    print_prompt();
 
     while (fgets(line, 4096, stdin)) {
         /* Split our line into words. */
         struct tokens *tokens = tokenize(line,SPACE_CHARS);
 
+        if(tokens_get_length(tokens)==0){//to handle empty lines
+            print_prompt();
+            continue;
+        }
         /* Find which built-in function to run. */
         int fundex = lookup(tokens_get_token(tokens, 0));
-
-        if (shell_is_interactive)
-            /* Please only print shell prompts when standard input is not a tty */
-            fprintf(stdout, "%d: ", ++line_num);
 
         if (fundex >= 0) {
             cmd_table[fundex].fun(tokens);
         } else {
-            /* REPLACE this to run commands as programs. */
             char *cmd = tokens_get_token(tokens, 0);
             char **args = get_args(tokens);
             char *resolved_path = get_resolved_path(cmd); 
 
             if( resolved_path == NULL) {
-                if (shell_is_interactive)
-                    /* Please only print shell prompts when standard input is not a tty */
-                    fprintf(stdout, "%d: ", ++line_num);
                 printf("%s: command not found\n",cmd);
+                print_prompt();
+                continue;
             }
 
             int background = isBackground(tokens);
@@ -279,6 +291,7 @@ int main(unused int argc, unused char *argv[]) {
             /* Clean up memory */
             tokens_destroy(tokens);
         }
+        print_prompt();
     }
 
     return 0;
