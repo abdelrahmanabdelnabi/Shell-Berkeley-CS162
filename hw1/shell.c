@@ -13,20 +13,8 @@
 
 #include "tokenizer.h"
 
-/* Convenience macro to silence compiler warnings about unused function parameters. */
 #define unused __attribute__((unused))
 
-/* Whether the shell is connected to an actual terminal or not. */
-bool shell_is_interactive;
-
-/* File descriptor for the shell input */
-int shell_terminal;
-
-/* Terminal mode settings for the shell */
-struct termios shell_tmodes;
-
-/* Process group id for the shell */
-pid_t shell_pgid;
 
 /* The number of processes running in the background */
 int nr_background;
@@ -164,34 +152,6 @@ char *get_resolved_path(char* prog_name){
 }
 
 
-/* Intialization procedures for this shell */
-void init_shell() {
-    /* Our shell is connected to standard input. */
-    shell_terminal = STDIN_FILENO;
-
-    /* Check if we are running interactively */
-    shell_is_interactive = isatty(shell_terminal);
-
-    nr_background = 0;
-
-    if (shell_is_interactive) {
-        /* If the shell is not currently in the foreground, we must pause the shell until it becomes a
-         * foreground process. We use SIGTTIN to pause the shell. When the shell gets moved to the
-         * foreground, we'll receive a SIGCONT. */
-        while (tcgetpgrp(shell_terminal) != (shell_pgid = getpgrp()))
-            kill(-shell_pgid, SIGTTIN);
-
-        /* Saves the shell's process id */
-        shell_pgid = getpid();
-
-        /* Take control of the terminal */
-        tcsetpgrp(shell_terminal, shell_pgid);
-
-        /* Save the current termios to a variable, so it can be restored later. */
-        tcgetattr(shell_terminal, &shell_tmodes);
-    }
-}
-
 
 char** get_args(struct tokens *tokens) {
     size_t length = tokens_get_length(tokens);
@@ -201,7 +161,6 @@ char** get_args(struct tokens *tokens) {
     char **args = malloc((length + 1 ) * sizeof(char*)); // +1 to terminate the array with null
     int index = 0;
     for(int i = 0; i < length; i++) {
-        // TODO: only pass arguements and keep pipes and "&" for the shell to interpret
         char* token = tokens_get_token(tokens, i);
         if(strncmp(token, "&", strlen("&")) != 0) {
             args[index] = token;
@@ -227,22 +186,12 @@ int isBackground(struct tokens *tokens) {
 }
 void print_prompt(){
     /* Please only print shell prompts when standard input is not a tty */
-    if (shell_is_interactive)
-        fprintf(stdout, "Shell> ");
-}
-
-void child_exit_handler(int sig) {
-    wait(NULL);
-
-    nr_background--;
+    fprintf(stdout, "Shell> ");
 }
 
 int main(unused int argc, unused char *argv[]) {
-    init_shell();
     char *SPACE_CHARS = " \f\r\t\v\n";
     static char line[4096];
-    int line_num = 0;
-    // signal(SIGCHLD,child_exit_handler);
 
     print_prompt();
 
