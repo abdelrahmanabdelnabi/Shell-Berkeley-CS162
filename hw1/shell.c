@@ -13,7 +13,6 @@
 
 #include "tokenizer.h"
 
-#define unused __attribute__((unused))
 
 
 /* The number of processes running in the background */
@@ -24,10 +23,8 @@ int cmd_help(struct tokens *tokens);
 int cmd_pwd(struct tokens *tokens);
 int cmd_cd(struct tokens *tokens);
 
-/* Built-in command functions take token array (see parse.h) and return int */
 typedef int cmd_fun_t(struct tokens *tokens);
 
-/* Built-in command struct and lookup table */
 typedef struct fun_desc {
     cmd_fun_t *fun;
     char *cmd;
@@ -35,8 +32,8 @@ typedef struct fun_desc {
 } fun_desc_t;
 
 fun_desc_t cmd_table[] = {
-        {cmd_help, "?", "show this help menu"},
-        {cmd_exit, "exit", "exit the command shell"},
+        {cmd_help, "?", "show help menu"},
+        {cmd_exit, "exit", "exit the shell"},
         {cmd_pwd, "pwd", "print the current working directory"},
         {cmd_cd, "cd", "change the current directory to the directory given as an argument"}
 };
@@ -44,18 +41,18 @@ fun_desc_t cmd_table[] = {
 
 
 /* Prints a helpful description for the given command */
-int cmd_help(unused struct tokens *tokens) {
+int cmd_help( struct tokens *tokens) {
     for (unsigned int i = 0; i < sizeof(cmd_table) / sizeof(fun_desc_t); i++)
         printf("%s - %s\n", cmd_table[i].cmd, cmd_table[i].doc);
     return 1;
 }
 
 /* Exits this shell */
-int cmd_exit(unused struct tokens *tokens) {
+int cmd_exit( struct tokens *tokens) {
     exit(0);
 }
 
-int cmd_pwd(unused struct tokens *tokens){
+int cmd_pwd( struct tokens *tokens){
 
     char cwd[1024];
     getcwd(cwd, sizeof(cwd));
@@ -189,7 +186,7 @@ void print_prompt(){
     fprintf(stdout, "Shell> ");
 }
 
-int main(unused int argc, unused char *argv[]) {
+int main( int argc,  char *argv[]) {
     char *SPACE_CHARS = " \f\r\t\v\n";
     static char line[4096];
 
